@@ -11,7 +11,6 @@ __Note: this module is only tested to work on linux (ubuntu)__
 Can be installed with pip or by running `python3 setup.py install`.
 The setup process includes compiling the c-extension, which has the following requirements (both installable via apt):
 * libgmp-dev
-* libssl-dev
 
 ## Usage
 

@@ -17,10 +17,11 @@ with open('sloth.c', 'r') as c_file:
 
 ffibuilder.set_source(
     "_sloth", c_str,
-    libraries=['m', 'gmp', 'ssl', 'crypto'],
+    libraries=['m', 'gmp', 'crypto'],
     include_dirs=[
         '/usr/local/include',
         '/usr/local/opt/openssl/include',
+        'vendor',
     ],
     library_dirs=[
         '/usr/local/lib',

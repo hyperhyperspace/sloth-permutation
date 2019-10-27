@@ -1,0 +1,29 @@
+{
+  "name": "@subspace/sloth",
+  "description": "",
+  "keywords": [],
+  "version": "0.1.0",
+  "homepage": "https://github.com/subspace/sloth",
+  "author": "Nazar Mokrynskyi <nazar@mokrynskyi.com>",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/subspace/sloth.git"
+  },
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bash buid-wasm.sh",
+    "vendor": "mkdir -p vendor; cd vendor; git clone https://github.com/WaterJuice/WjCryptLib.git; cd WjCryptLib; git checkout e39760a85015b88820d7a2de832155a7c8ff2c88"
+  },
+  "devDependencies": {
+    "tslint": "^5.20.0",
+    "typescript": "^3.6.4"
+  },
+  "dependencies": {
+    "@types/node": "^12.11.7"
+  }
+}

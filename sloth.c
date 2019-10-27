@@ -1,12 +1,6 @@
-#include <stdio.h>
-#include <string.h>
-#include <openssl/evp.h>
-#include <openssl/bio.h>
+#include <WjCryptLib/lib/WjCryptLib_Sha512.c>
+#include <stdlib.h>
 #include <gmp.h>
-
-#define PROGRESS
-
-static void update_progress(int);
 
 void next_prime(mpz_t p, const mpz_t n) {
     if (mpz_even_p(n)) mpz_add_ui(p,n,1);
@@ -68,28 +62,9 @@ void xor_mod(mpz_t result, const mpz_t input1, const mpz_t flip, const mpz_t mod
 // SHA512
 int sloth_digest(unsigned char outputBuffer[], const void *inputBuffer, size_t input_len)
 {
-
-    EVP_MD_CTX *mdctx;
-    const EVP_MD *md;
-    unsigned char hash[EVP_MAX_MD_SIZE];
-    unsigned int md_len;
-
-    OpenSSL_add_all_digests();
-
-    md = EVP_get_digestbyname("SHA512");
-    if(!md) {
-        printf("Unknown message digest SHA512");
-        return 1;
-    }
-
-    mdctx = EVP_MD_CTX_create();
-
-    EVP_DigestInit_ex(mdctx, md, NULL);
-    EVP_DigestUpdate(mdctx, inputBuffer, input_len);
-    EVP_DigestFinal_ex(mdctx, hash, &md_len);
-    EVP_MD_CTX_destroy(mdctx);
-
-    memcpy(outputBuffer, hash, md_len);
+    SHA512_HASH digest;
+    Sha512Calculate(inputBuffer, input_len, &digest);
+    memcpy(outputBuffer, digest.bytes, 64);
 
     return 0;
 }
@@ -147,34 +122,18 @@ void sloth_core(mpz_t witness, const mpz_t seed, int iterations, const mpz_t p) 
     mpz_add_ui(e, e, 1);
     mpz_tdiv_q_ui(e, e, 4);
 
-#ifdef PROGRESS
-    int prev_i = 0;
-    int progress_step = 10;
-    if (iterations > 200) { progress_step = iterations / 200; }
-#endif
-
     int i = 1;
     for (;i <= iterations; ++i) {
         //permutation(a, a);
         xor_mod(a,a,ones,p);
         sqrt_permutation(a, a, p, e);
-#ifndef PROGRESS
     }
-#else
-        if (i % progress_step == 0) {
-            update_progress(i - prev_i);
-            prev_i = i;
-        }
-    }
-    if (prev_i != iterations) {
-        update_progress(i - prev_i);
-    }
-#endif
 
     mpz_set(witness, a);
 
     mpz_clear(a);
     mpz_clear(ones);
+    mpz_clear(e);
 }
 
 // computes witness = the sloth witness, for the given seed, number of iterations and prime p
@@ -207,29 +166,12 @@ int sloth_verification_core(const unsigned char witness[], size_t witness_size, 
     mpz_mul_2exp(ones, ones, mpz_sizeinbase(p,2) >> 1);
     mpz_sub_ui(ones, ones, 1);
 
-#ifdef PROGRESS
-    int prev_i = 0;
-    int progress_step = 10;
-    if (iterations > 200) { progress_step = iterations / 200; }
-#endif
-
     int i = 1;
     for (;i <= iterations; ++i) {
         invert_sqrt(a, a, p);
         //invert_permutation(a, a);
         xor_mod(a,a,ones,p);
-#ifndef PROGRESS
     }
-#else
-        if (i % progress_step == 0) {
-            update_progress(i - prev_i);
-            prev_i = i;
-        }
-    }
-    if (prev_i != iterations) {
-        update_progress(i - prev_i);
-    }
-#endif
 
     int verif = (mpz_cmp(seed, a) == 0); // true if seed == a
     mpz_clear(a);
@@ -248,26 +190,17 @@ int sloth_verification(const unsigned char witness[], size_t witness_size, const
     unsigned char* witness_hash = malloc(final_hash_size);
     sloth_digest(witness_hash, witness, witness_size);
     int res = memcmp(witness_hash, final_hash, final_hash_size);
+    free(witness_hash);
     if (res != 0) {
-        puts("HASHED DOES NOT MATCH!");
-        puts("Final hash");
-        for (size_t i = 0; i < final_hash_size; ++i) {
-            printf("%02x ", final_hash[i]);
-        }
-        puts("\nWitness hash");
-        for (size_t i = 0; i < final_hash_size; ++i) {
-            printf("%02x ", witness_hash[i]);
-        }
-        puts("\nRAW Witness");
-        for (size_t i = 0; i < witness_size; ++i) {
-            printf("%02x ", witness[i]);
-        }
-        puts("");
+        mpz_clear(p);
+        mpz_clear(seed_mpz);
         return 0;
     }
-    free(witness_hash);
 
     sloth_preprocessing(p,seed_mpz,input_string,bits);
 
-    return sloth_verification_core(witness, witness_size, seed_mpz, iterations, p);
+    res = sloth_verification_core(witness, witness_size, seed_mpz, iterations, p);
+    mpz_clear(p);
+    mpz_clear(seed_mpz);
+    return res;
 }
