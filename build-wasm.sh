@@ -41,7 +41,7 @@ echo Compiling to WebAssembly
 
 OPTIMIZE='-Oz --llvm-lto 1 --closure 1 -s NO_EXIT_RUNTIME=1 -s NO_FILESYSTEM=1 -s EXPORTED_RUNTIME_METHODS=[] -s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE=[]'
 
-EMMAKEN_CFLAGS="-I .cache/$GMP_RELEASE -I vendor" emcc sloth.c .cache/lib/libgmp.a -o src/sloth.js -s MODULARIZE=1 -s EXPORTED_FUNCTIONS='["_malloc","_free","_sloth","_sloth_verification"]' -s WASM=1 $OPTIMIZE;
+EMMAKEN_CFLAGS="-I .cache/$GMP_RELEASE -I vendor" emcc sloth.c .cache/lib/libgmp.a src/subspace.c -o src/sloth.js -s MODULARIZE=1 -s EXPORTED_FUNCTIONS='["_malloc","_free","_sloth","_sloth_verification", "_subspace_create_prime", "_subspace_encode", "_subspace_decode", "_subspace_destroy_prime"]' -s WASM=1 $OPTIMIZE;
 
 #echo Creating build artifacts in $TARGET_DIR
 #
