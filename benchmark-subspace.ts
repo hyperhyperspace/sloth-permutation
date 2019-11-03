@@ -4,9 +4,8 @@ import {Subspace} from "./src/Subspace";
 (async () => {
     const benchmarkIterations = 1000;
 
-    const blockSize = 64;
     const rounds = 5;
-    const primeInput = createHash('sha512')
+    const primeInputBlock = createHash('sha512')
         .update('subspace')
         .digest();
     const dataBlock = createHash('sha512')
@@ -14,26 +13,32 @@ import {Subspace} from "./src/Subspace";
         .digest();
 
     const data = Buffer.concat([dataBlock, dataBlock]);
+    const primeInput = Buffer.concat([primeInputBlock, primeInputBlock]);
 
-    const encoderDecoder = await Subspace.instantiate(primeInput, blockSize, rounds);
+    for (const blockSize of [32, 64, 96, 128]) {
+        const encoderDecoder = await Subspace.instantiate(primeInput.slice(0, blockSize), blockSize, rounds);
 
-    const encodedData = encoderDecoder.encode(data);
+        {
+            const localData = data.slice(0, blockSize);
 
-    {
-        const start = process.hrtime.bigint();
-        for (let i = 0; i < benchmarkIterations; ++i) {
-            encoderDecoder.encode(data);
+            const start = process.hrtime.bigint();
+            for (let i = 0; i < benchmarkIterations; ++i) {
+                encoderDecoder.encode(localData);
+            }
+            console.log(`Encoding time (block size ${blockSize}): ${(process.hrtime.bigint() - start) / 1000000n}ms`);
         }
-        console.log(`Encoding time: ${(process.hrtime.bigint() - start) / 1000000n}ms`);
-    }
 
-    {
-        const start = process.hrtime.bigint();
-        for (let i = 0; i < benchmarkIterations; ++i) {
-            encoderDecoder.decode(encodedData);
+        {
+            const localData = data.slice(0, blockSize);
+            const encodedData = encoderDecoder.encode(localData);
+
+            const start = process.hrtime.bigint();
+            for (let i = 0; i < benchmarkIterations; ++i) {
+                encoderDecoder.decode(encodedData);
+            }
+            console.log(`Decoding time (block size ${blockSize}): ${(process.hrtime.bigint() - start) / 1000000n}ms`);
         }
-        console.log(`Decoding time: ${(process.hrtime.bigint() - start) / 1000000n}ms`);
-    }
 
-    encoderDecoder.destroy();
+        encoderDecoder.destroy();
+    }
 })();
