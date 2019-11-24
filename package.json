@@ -1,13 +1,13 @@
 {
-  "name": "@subspace/sloth",
+  "name": "@subspace/sloth-permutation",
   "description": "",
   "keywords": [],
   "version": "0.1.0",
-  "homepage": "https://github.com/subspace/sloth",
+  "homepage": "https://github.com/subspace/sloth-permutation",
   "author": "Nazar Mokrynskyi <nazar@mokrynskyi.com>",
   "repository": {
     "type": "git",
-    "url": "git://github.com/subspace/sloth.git"
+    "url": "git://github.com/subspace/sloth-permutation.git"
   },
   "license": "MIT",
   "main": "dist/index.js",
@@ -16,14 +16,24 @@
     "dist"
   ],
   "scripts": {
-    "build": "bash buid-wasm.sh",
+    "build": "npm run clean && npm run lint && npm run compile-wasm && npm run compile && npm run copy-wasm-artifacts && npm run minify",
+    "compile-wasm": "bash build-wasm.sh",
+    "clean": "rm -rf dist",
+    "compile": "tsc -b",
+    "lint": "tslint --project .",
+    "copy-wasm-artifacts": "cp src/sloth.* dist/",
+    "minify": "terser --compress --mangle -- dist/index.js > dist/index.min.js",
+    "test": "npm run lint && ts-node node_modules/.bin/tape tests/**/*.ts",
     "vendor": "mkdir -p vendor; cd vendor; git clone https://github.com/WaterJuice/WjCryptLib.git; cd WjCryptLib; git checkout e39760a85015b88820d7a2de832155a7c8ff2c88"
   },
   "devDependencies": {
-    "tslint": "^5.20.0",
-    "typescript": "^3.6.4"
+    "@types/tape": "^4.2.33",
+    "tape": "^4.11.0",
+    "terser": "^4.3.1",
+    "tslint": "^5.20.1",
+    "typescript": "^3.7.2"
   },
   "dependencies": {
-    "@types/node": "^12.11.7"
+    "@types/node": "^12.12.12"
   }
 }

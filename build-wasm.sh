@@ -12,11 +12,8 @@ fi
 
 cd `dirname "${BASH_SOURCE[0]}"`
 
-TARGET_DIR=$(pwd)/src
 CACHE_DIR=$(pwd)/.cache
-BUILD_ARTIFACTS_LOCATION=target/wasm32-unknown-emscripten/release
 GMP_RELEASE=gmp-6.1.2
-OPENSSL_RELEASE=openssl-1.1.1d
 
 mkdir -p $CACHE_DIR/lib
 
@@ -41,18 +38,6 @@ echo Compiling to WebAssembly
 
 OPTIMIZE='-Oz --llvm-lto 1 --closure 1 -s NO_EXIT_RUNTIME=1 -s NO_FILESYSTEM=1 -s EXPORTED_RUNTIME_METHODS=[] -s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE=[]'
 
-EMMAKEN_CFLAGS="-I .cache/$GMP_RELEASE -I vendor" emcc sloth.c .cache/lib/libgmp.a src/subspace.c -o src/sloth.js -s MODULARIZE=1 -s EXPORTED_FUNCTIONS='["_malloc","_free","_sloth","_sloth_verification", "_subspace_create_prime", "_subspace_encode", "_subspace_decode", "_subspace_destroy_prime"]' -s WASM=1 $OPTIMIZE;
+EMMAKEN_CFLAGS="-I .cache/$GMP_RELEASE -I vendor" emcc sloth.c .cache/lib/libgmp.a src/subspace.c -o src/sloth.js -s MODULARIZE=1 -s EXPORTED_FUNCTIONS='["_malloc","_free", "_sloth_permutation_create_prime", "_sloth_permutation_encode", "_sloth_permutation_decode", "_sloth_permutation_destroy_prime"]' -s WASM=1 $OPTIMIZE;
 
-#echo Creating build artifacts in $TARGET_DIR
-#
-#mkdir -p $TARGET_DIR
-#
-#rm -f $TARGET_DIR/vdf.{js,wasm}
-#
-#cp $BUILD_ARTIFACTS_LOCATION/deps/*.wasm $TARGET_DIR/vdf.wasm
-#cp $BUILD_ARTIFACTS_LOCATION/deps/*.js $TARGET_DIR/vdf.js
-#
-#wasm_artifact_name=$(basename $BUILD_ARTIFACTS_LOCATION/deps/*.wasm)
-#sed -i s/$wasm_artifact_name/vdf.wasm/ "$TARGET_DIR/vdf.js"
-#
-#echo Done
+echo Done

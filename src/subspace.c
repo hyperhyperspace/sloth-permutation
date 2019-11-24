@@ -9,7 +9,7 @@ void invert_sqrt(mpz_t result, const mpz_t input, const mpz_t p);
 void xor_mod(mpz_t result, const mpz_t input1, const mpz_t flip, const mpz_t mod);
 
 // Takes `input` of a `block_size` and returns a pointer to a prime
-mpz_t *subspace_create_prime(
+mpz_t *sloth_permutation_create_prime(
     const uint8_t *input,
     const int block_size
 ) {
@@ -34,7 +34,7 @@ mpz_t *subspace_create_prime(
     return prime;
 }
 
-void subspace_encode(
+void sloth_permutation_encode(
     const uint8_t *data,
     const int block_size,
     const mpz_t *prime,
@@ -69,7 +69,7 @@ void subspace_encode(
     mpz_clear(exponent);
 }
 
-void subspace_decode(
+void sloth_permutation_decode(
     const uint8_t *encoded_data,
     const int block_size,
     const mpz_t *prime,
@@ -98,7 +98,7 @@ void subspace_decode(
 }
 
 // Takes a pointer to a prime, clears it and frees allocated memory
-void subspace_destroy_prime(mpz_t *prime) {
+void sloth_permutation_destroy_prime(mpz_t *prime) {
     mpz_clear(*prime);
     free(*prime);
 }

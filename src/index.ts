@@ -1,103 +1,165 @@
 /* tslint:disable:no-var-requires */
 const slothWasm = require('./sloth');
 
+type Pointer = number;
+
 interface IWasm {
     then: (callback: () => void) => void;
 
     HEAPU8: Uint8Array;
 
-    _sloth(witness: number, witnessSize: number, outputBuffer: number, inputString: number, bits: number, iterations: number): number;
+    _sloth_permutation_create_prime(input: Pointer, blockSize: number): Pointer;
 
-    _sloth_verification(witness: number, witnessSize: number, finalHash: number, inputString: number, bits: number, iterations: number): number;
+    _sloth_permutation_encode(data: Pointer, blockSize: number, prime: Pointer, rounds: number, encodedData: Pointer, encodedDataSize: Pointer): number;
 
-    _malloc(length: number): number;
+    _sloth_permutation_decode(encodedData: Pointer, blockSize: number, prime: Pointer, rounds: number, data: Pointer, dataSize: Pointer): number;
 
-    _free(pointer: number, length: number): void;
+    _sloth_permutation_destroy_prime(prime: Pointer): number;
+
+    _malloc(length: number): Pointer;
+
+    _free(pointer: Pointer, length: number): void;
 }
 
 const POINTER_SIZE = 4;
-const HASH_SIZE = 64;
 
-export class Sloth {
-
+export class SlothPermutation {
     /**
-     * @param options Options that will be given to Emscripten's Module
+     * @param primeInput Input for generating a prime, must be of `blockSize`
+     * @param blockSize
+     * @param rounds     Encoding/decoding rounds to be used
+     * @param options    Options that will be given to Emscripten's Module
      */
-    public static async instantiate(options: any = {}): Promise<Sloth> {
+    public static async instantiate(primeInput: Uint8Array, blockSize: number, rounds: number, options: any = {}): Promise<SlothPermutation> {
+        if (primeInput.length !== blockSize) {
+            throw new Error("Input length does't match blockSize");
+        }
         const instance: IWasm = slothWasm(options);
         await new Promise((resolve) => {
             instance.then(() => {
                 resolve();
             });
         });
-        return new Sloth(instance);
+        return new SlothPermutation(instance, primeInput, blockSize, rounds);
     }
 
-    private constructor(private readonly instance: IWasm) {
+    private readonly prime: Pointer;
+    private destroyed = false;
+
+    private constructor(
+        private readonly instance: IWasm,
+        primeInput: Uint8Array,
+        private readonly blockSize: number,
+        private readonly rounds: number,
+    ) {
+        const inputLength = primeInput.length;
+        const inputPointer = instance._malloc(inputLength);
+        instance.HEAPU8.set(primeInput, inputPointer);
+        this.prime = instance._sloth_permutation_create_prime(inputPointer, blockSize);
+        instance._free(inputPointer, inputLength);
     }
 
-    /**
-     * @param data
-     * @param bits
-     * @param iterations
-     *
-     * @return [witnessBytes, hash]
-     */
-    public compute(data: string, bits: number, iterations: number): [Uint8Array, Uint8Array] {
+    public encode(data: Uint8Array): Uint8Array {
+        if (this.destroyed) {
+            throw new Error('Already destroyed');
+        }
+
+        const blockSize = this.blockSize;
+
+        const dataLength = data.length;
+        if (dataLength % blockSize !== 0) {
+            throw new Error('Data must be a multiple of block size');
+        }
+
+        const encodedData = new Uint8Array(dataLength);
+        for (let offset = 0; offset < dataLength; offset += blockSize) {
+            this.encodeBlock(
+                data.subarray(offset, offset + blockSize),
+                encodedData.subarray(offset, offset + blockSize),
+            );
+        }
+
+        return encodedData;
+    }
+
+    public decode(encodedData: Uint8Array): Uint8Array {
+        if (this.destroyed) {
+            throw new Error('Already destroyed');
+        }
+
+        const blockSize = this.blockSize;
+
+        const dataLength = encodedData.length;
+        if (dataLength % blockSize !== 0) {
+            throw new Error('Encoded data must be a multiple of block size');
+        }
+
+        const decodedData = new Uint8Array(dataLength);
+        for (let offset = 0; offset < dataLength; offset += blockSize) {
+            this.decodedBlock(
+                encodedData.subarray(offset, offset + blockSize),
+                decodedData.subarray(offset, offset + blockSize),
+            );
+        }
+
+        return decodedData;
+    }
+
+    public destroy(): void {
+        if (this.destroyed) {
+            throw new Error('Already destroyed');
+        }
+        this.destroyed = true;
+        this.instance._sloth_permutation_destroy_prime(this.prime);
+    }
+
+    private encodeBlock(block: Uint8Array, encodedBlock: Uint8Array): void {
         const instance = this.instance;
+        const blockSize = this.blockSize;
 
-        const witnessMaxSize = bits / 8;
-        const witness = instance._malloc(witnessMaxSize);
-        const witnessSize = instance._malloc(POINTER_SIZE);
+        const dataPointer = instance._malloc(blockSize);
+        instance.HEAPU8.set(block, dataPointer);
 
-        const outputBuffer = instance._malloc(HASH_SIZE);
+        const encodedDataPointer = instance._malloc(blockSize);
+        const encodedDataSizePointer = instance._malloc(POINTER_SIZE);
 
-        const dataBuffer = Buffer.from(data);
-        // Null-terminated string for C
-        const inputStringSize = dataBuffer.length + 1;
-        const inputString = instance._malloc(inputStringSize);
-        instance.HEAPU8.set(dataBuffer, inputString);
-
-        instance._sloth(witness, witnessSize, outputBuffer, inputString, bits, iterations);
+        instance._sloth_permutation_encode(dataPointer, blockSize, this.prime, this.rounds, encodedDataPointer, encodedDataSizePointer);
 
         const view = new DataView(instance.HEAPU8.buffer);
-        const witnessBytes = instance.HEAPU8.slice(
-            witness,
-            witness + view.getUint32(witnessSize, true),
+        encodedBlock.set(
+            instance.HEAPU8.subarray(
+                encodedDataPointer,
+                encodedDataPointer + view.getUint32(encodedDataSizePointer, true),
+            ),
         );
-        const hash = instance.HEAPU8.slice(outputBuffer, outputBuffer + HASH_SIZE);
 
-        instance._free(witness, witnessMaxSize);
-        instance._free(witnessSize, POINTER_SIZE);
-        instance._free(outputBuffer, HASH_SIZE);
-        instance._free(inputString, inputStringSize);
-
-        return [witnessBytes, hash];
+        instance._free(dataPointer, blockSize);
+        instance._free(encodedDataPointer, blockSize);
+        instance._free(encodedDataSizePointer, POINTER_SIZE);
     }
 
-    public verify(witnessBytes: Uint8Array, hash: Uint8Array, data: string, bits: number, iterations: number): boolean {
+    private decodedBlock(encodedBlock: Uint8Array, block: Uint8Array): void {
         const instance = this.instance;
+        const blockSize = this.blockSize;
 
-        const witnessLength = witnessBytes.length;
+        const encodedDataPointer = instance._malloc(blockSize);
+        instance.HEAPU8.set(encodedBlock, encodedDataPointer);
 
-        const witness = instance._malloc(witnessLength);
-        instance.HEAPU8.set(witnessBytes, witness);
+        const dataPointer = instance._malloc(blockSize);
+        const dataSizePointer = instance._malloc(POINTER_SIZE);
 
-        const finalHash = instance._malloc(HASH_SIZE);
-        instance.HEAPU8.set(hash, finalHash);
+        instance._sloth_permutation_decode(encodedDataPointer, blockSize, this.prime, this.rounds, dataPointer, dataSizePointer);
 
-        const dataBuffer = Buffer.from(data);
-        // Null-terminated string for C
-        const inputStringSize = dataBuffer.length + 1;
-        const inputString = instance._malloc(inputStringSize);
-        instance.HEAPU8.set(dataBuffer, inputString);
+        const view = new DataView(instance.HEAPU8.buffer);
+        block.set(
+            instance.HEAPU8.subarray(
+                dataPointer,
+                dataPointer + view.getUint32(dataSizePointer, true),
+            ),
+        );
 
-        const result = instance._sloth_verification(witness, witnessLength, finalHash, inputString, bits, iterations);
-
-        instance._free(witness, witnessLength);
-        instance._free(finalHash, HASH_SIZE);
-        instance._free(inputString, inputStringSize);
-
-        return result === 1;
+        instance._free(encodedDataPointer, blockSize);
+        instance._free(dataPointer, blockSize);
+        instance._free(dataSizePointer, POINTER_SIZE);
     }
 }

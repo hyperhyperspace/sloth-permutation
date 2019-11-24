@@ -223,6 +223,6 @@ _sloth.c
 # JS
 dist
 node_modules
-target
 vendor
-#src/sloth.*
+src/sloth.*
+.idea

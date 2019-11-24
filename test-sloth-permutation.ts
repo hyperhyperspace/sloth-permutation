@@ -1,5 +1,5 @@
 import {createHash} from "crypto";
-import {Subspace} from "./src/Subspace";
+import {SlothPermutation} from "./src";
 
 (async () => {
     const blockSize = 64;
@@ -13,7 +13,7 @@ import {Subspace} from "./src/Subspace";
 
     const data = Buffer.concat([dataBlock, dataBlock]);
 
-    const encoderDecoder = await Subspace.instantiate(primeInput, blockSize, rounds);
+    const encoderDecoder = await SlothPermutation.instantiate(primeInput, blockSize, rounds);
 
     console.log('Data:', data.toString('hex'));
 
