@@ -3,7 +3,7 @@ Sloth permutation (modular square root) for JavaScript (TypeScript) using WebAss
 
 ### Rationale
 
-From Subspace blockchain whitepaper:
+From Subspace blockchain [whitepaper](https://drive.google.com/file/d/1v847u_XeVf0SBz7Y7LEMXi72QfqirstL/view):
 ```
 Choice of Permutation. While any cryptographically secure
 PRP will suffice for the codec, an ideal candidate would be
