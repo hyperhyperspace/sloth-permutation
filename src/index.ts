@@ -67,6 +67,13 @@ export class SlothPermutation {
         instance._free(inputPointer, inputLength);
     }
 
+    public generateProofVDF(
+        rounds: number,
+        data: Uint8Array,
+        ): Uint8Array {
+            return this.encode(rounds, data);
+        }
+
     public encode(
         rounds: number,
         data: Uint8Array,
@@ -92,6 +99,14 @@ export class SlothPermutation {
         }
 
         return encodedData;
+    }
+
+    public verifyProofVDF(
+        rounds: number,
+        data: Uint8Array,
+        encodedData: Uint8Array,
+    ): boolean {
+        return this.decode(rounds, encodedData).join(',') === data.join(',');
     }
 
     public decode(
