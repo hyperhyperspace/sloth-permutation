@@ -1,3 +1,5 @@
+import {createHash} from "crypto";
+
 /* tslint:disable:no-var-requires */
 const slothWasm = require('./sloth');
 
@@ -30,9 +32,16 @@ export class SlothPermutation {
      * @param rounds     Encoding/decoding rounds to be used
      * @param options    Options that will be given to Emscripten's Module
      */
-    public static async instantiate(primeInput: Uint8Array, blockSize: number, rounds: number, options: any = {}): Promise<SlothPermutation> {
-        if (primeInput.length !== blockSize) {
-            throw new Error("Input length does't match blockSize");
+    public static async instantiate(blockSize: number, options: any = {}): Promise<SlothPermutation> {
+        if (blockSize % 64 !== 0) {
+            throw new Error("Input blockSize is incorrect, blockSize must be a power of 2 times 64: 64, 128, 256, etc..");
+        }
+        const primeInput64 = createHash('sha512')
+            .update('@hyperhyperspace/sloth-permutation')
+            .digest();
+        let primeInput = primeInput64;
+        while (primeInput.length < blockSize) {
+            primeInput = Buffer.concat([primeInput, primeInput64]);
         }
         const instance: IWasm = slothWasm(options);
         await new Promise((resolve) => {
@@ -40,7 +49,7 @@ export class SlothPermutation {
                 resolve();
             });
         });
-        return new SlothPermutation(instance, primeInput, blockSize, rounds);
+        return new SlothPermutation(instance, primeInput, blockSize);
     }
 
     private readonly prime: Pointer;
@@ -50,7 +59,6 @@ export class SlothPermutation {
         private readonly instance: IWasm,
         primeInput: Uint8Array,
         private readonly blockSize: number,
-        private readonly rounds: number,
     ) {
         const inputLength = primeInput.length;
         const inputPointer = instance._malloc(inputLength);
@@ -59,7 +67,10 @@ export class SlothPermutation {
         instance._free(inputPointer, inputLength);
     }
 
-    public encode(data: Uint8Array): Uint8Array {
+    public encode(
+        rounds: number,
+        data: Uint8Array,
+        ): Uint8Array {
         if (this.destroyed) {
             throw new Error('Already destroyed');
         }
@@ -74,6 +85,7 @@ export class SlothPermutation {
         const encodedData = new Uint8Array(dataLength);
         for (let offset = 0; offset < dataLength; offset += blockSize) {
             this.encodeBlock(
+                rounds,
                 data.subarray(offset, offset + blockSize),
                 encodedData.subarray(offset, offset + blockSize),
             );
@@ -82,7 +94,10 @@ export class SlothPermutation {
         return encodedData;
     }
 
-    public decode(encodedData: Uint8Array): Uint8Array {
+    public decode(
+        rounds: number,
+        encodedData: Uint8Array,
+    ): Uint8Array {
         if (this.destroyed) {
             throw new Error('Already destroyed');
         }
@@ -97,6 +112,7 @@ export class SlothPermutation {
         const decodedData = new Uint8Array(dataLength);
         for (let offset = 0; offset < dataLength; offset += blockSize) {
             this.decodedBlock(
+                rounds,
                 encodedData.subarray(offset, offset + blockSize),
                 decodedData.subarray(offset, offset + blockSize),
             );
@@ -113,7 +129,11 @@ export class SlothPermutation {
         this.instance._sloth_permutation_destroy_prime(this.prime);
     }
 
-    private encodeBlock(block: Uint8Array, encodedBlock: Uint8Array): void {
+    private encodeBlock(
+        rounds: number,
+        block: Uint8Array,
+        encodedBlock: Uint8Array,
+    ): void {
         const instance = this.instance;
         const blockSize = this.blockSize;
 
@@ -123,7 +143,7 @@ export class SlothPermutation {
         const encodedDataPointer = instance._malloc(blockSize);
         const encodedDataSizePointer = instance._malloc(POINTER_SIZE);
 
-        instance._sloth_permutation_encode(dataPointer, blockSize, this.prime, this.rounds, encodedDataPointer, encodedDataSizePointer);
+        instance._sloth_permutation_encode(dataPointer, blockSize, this.prime, rounds, encodedDataPointer, encodedDataSizePointer);
 
         const view = new DataView(instance.HEAPU8.buffer);
         encodedBlock.set(
@@ -138,7 +158,11 @@ export class SlothPermutation {
         instance._free(encodedDataSizePointer, POINTER_SIZE);
     }
 
-    private decodedBlock(encodedBlock: Uint8Array, block: Uint8Array): void {
+    private decodedBlock(
+        rounds: number,
+        encodedBlock: Uint8Array,
+        block: Uint8Array,
+    ): void {
         const instance = this.instance;
         const blockSize = this.blockSize;
 
@@ -148,7 +172,7 @@ export class SlothPermutation {
         const dataPointer = instance._malloc(blockSize);
         const dataSizePointer = instance._malloc(POINTER_SIZE);
 
-        instance._sloth_permutation_decode(encodedDataPointer, blockSize, this.prime, this.rounds, dataPointer, dataSizePointer);
+        instance._sloth_permutation_decode(encodedDataPointer, blockSize, this.prime, rounds, dataPointer, dataSizePointer);
 
         const view = new DataView(instance.HEAPU8.buffer);
         block.set(

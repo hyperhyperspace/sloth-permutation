@@ -31,7 +31,7 @@
     "tape": "^4.11.0",
     "terser": "^4.3.1",
     "tslint": "^5.20.1",
-    "typescript": "^3.7.2"
+    "typescript": "^3.9.9"
   },
   "dependencies": {
     "@types/node": "^12.12.12"

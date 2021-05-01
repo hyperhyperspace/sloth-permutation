@@ -1,4 +1,4 @@
-#include <WjCryptLib/lib/WjCryptLib_Sha512.c>
+#include "WjCryptLib/lib/WjCryptLib_Sha512.c"
 #include <stdlib.h>
 #include <gmp.h>
 
