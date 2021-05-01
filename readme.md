@@ -3,7 +3,24 @@ Sloth permutation (modular square root) for JavaScript (TypeScript) using WebAss
 
 ### How to install
 ```bash
-npm install @subspace/sloth-permutation
+npm install @hyperhyperspace/sloth-permutation
+```
+
+### How to build
+
+Install emcc:
+```bash
+git clone https://github.com/emscripten-core/emsdk.git 
+cd emsdk
+./emsdk install latest
+./emsdk activate latest
+source ./emsdk_env.sh
+```
+Build:
+```bash
+git clone git@github.com:hyperhyperspace/sloth-permutation.git
+cd sloth-permutation
+yarn build
 ```
 
 ### How to use
