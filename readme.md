@@ -1,6 +1,26 @@
 # sloth-permutation
 Sloth permutation (modular square root) for JavaScript (TypeScript) using WebAssembly, originally from https://github.com/randomchain/pysloth
 
+### Rationale
+
+From Subspace blockchain whitepaper:
+```
+Choice of Permutation. While any cryptographically secure
+PRP will suffice for the codec, an ideal candidate would be
+both ASIC resistant and time-asymmetric, without imposing
+any new security assumptions. It turns out that we may
+
+construct such a permutation from the difficulty of comput-
+ing modular square roots, using the permutation underlying
+
+SLOTH (slow-time hash function) as a guide [14]. This has
+the advantage of a near-optimal encoding time on x86-64
+architecture, when using a 64-bit prime, while reducing the
+decoding time by at least one order of magnitude, significantly
+lowering the aggregate verification work done across the
+network for each new block.
+```
+
 ### How to install
 ```bash
 npm install @hyperhyperspace/sloth-permutation
