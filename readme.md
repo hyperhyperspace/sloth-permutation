@@ -8,15 +8,18 @@ npm install @hyperhyperspace/sloth-permutation
 
 ### How to build
 
-Install emcc:
+1. Install emcc:
 ```bash
 git clone https://github.com/emscripten-core/emsdk.git 
 cd emsdk
-./emsdk install latest
-./emsdk activate latest
+./emsdk install 1.39.0
+./emsdk activate 1.39.0
 source ./emsdk_env.sh
 ```
-Build:
+
+2. Install WjCryptLib (https://github.com/WaterJuice/WjCryptLib)
+
+3. Build:
 ```bash
 git clone git@github.com:hyperhyperspace/sloth-permutation.git
 cd sloth-permutation
