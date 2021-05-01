@@ -1,13 +1,13 @@
 {
-  "name": "@subspace/sloth-permutation",
+  "name": "@hyper-hyper-space/sloth-permutation",
   "description": "",
   "keywords": [],
   "version": "0.1.0",
-  "homepage": "https://github.com/subspace/sloth-permutation",
+  "homepage": "https://github.com/hyperhyperspace/sloth-permutation",
   "author": "Nazar Mokrynskyi <nazar@mokrynskyi.com>",
   "repository": {
     "type": "git",
-    "url": "git://github.com/subspace/sloth-permutation.git"
+    "url": "git://github.com/hyperhyperspace/sloth-permutation.git"
   },
   "license": "MIT",
   "main": "dist/index.js",
